@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 require('dotenv').config()
 // console.log(process.env.DB_UserName)
@@ -33,11 +33,26 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    // Insert a document into the MongoDB database
+    // Insert a document into the MongoDB database (Inside 'try', Outside 'app.post', cause we'll use it several times from different places)
     const coffeeCollections = client.db('coffeeDB').collection('coffees');
 
+    // 2. Read/get all the documents from the CoffeeDB database
+    app.get('/coffee', async(req, res) => {
+      const cursor = coffeeCollections.find();
+      const coffeeData = await cursor.toArray();
+      res.send(coffeeData);
+    });
 
-    // Get data from UI and send it to MongoDB
+    // 4. Update specific document from the CoffeeDB database
+    app.get('/coffee/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await coffeeCollections.findOne(query);
+      res.send(result);
+    })
+
+
+    // 1. Get data from UI and send it to MongoDB
     app.post('/coffee', async (req, res) => {
         const newCoffee = req.body;
         console.log(newCoffee);
@@ -45,6 +60,15 @@ async function run() {
         console.log(result);
         res.send(result);
     });
+
+    // 3. Delete specific documents from the CoffeeDB database
+    app.delete('/coffee/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await coffeeCollections.deleteOne(query);
+      res.send(result);
+    })
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
